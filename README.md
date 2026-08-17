@@ -71,6 +71,28 @@ cli-cove/
 | `menu_scan::list_scripts_in_category` | 列出某分类下按 `@order` 排序的脚本 |
 | `menu_scan::parse_metadata` | 解析脚本头部元数据到 `META_TITLE`/`META_DESC`/`META_ORDER` |
 | `paths::resolve_dir` | 解析文件所在真实目录（兼容软链接） |
+| `mirror_sync::kv_get` / `kv_set` | 读写纯文本 `KEY=value` 文件（配置/状态通用） |
+| `mirror_sync::build_manifest` | 生成目录的 sha256sum 兼容清单（用于导出/校验） |
+| `mirror_sync::diff_manifest` | 对比两份清单，输出新增/变化的相对路径（增量导出） |
+| `mirror_sync::verify_package` | 校验离线数据包的 `CHECKSUMS.sha256` 完整性 |
+| `mirror_sync::check_import_order` | 依据链/序号判断导入顺序：`init`/`ok`/`new_chain`/`reject:*` |
+| `mirror_sync::is_duplicate_import` / `record_import` | 导入去重检查与状态记录 |
+
+## 软件包镜像离线导入导出（mirror-sync）
+
+`scripts/mirror_sync/` 提供 Verdaccio（NPM）、Devpi（Python）镜像仓库的离线导出/导入：
+
+1. 首次运行任意脚本会交互式提示配置存储目录等路径（也可先跑
+   `scripts/mirror_sync/configure.sh` 统一配置），保存在
+   `~/.cli-cove/mirror-sync/config.env`。
+2. `npm_export.sh` / `python_export.sh`：首次为全量导出，此后自动增量导出，产出
+   带版本号（链 ID + 序号）与 sha256 完整性校验的 `.tar` 数据包，可用
+   `scripts/optical/burn_disc.sh` 刻录传输。
+3. `npm_import.sh` / `python_import.sh`：在隔离环境中校验数据包完整性、检查
+   导入顺序、防止重复导入，完成后提示手动重启对应服务
+   （`systemctl restart verdaccio` / `devpi-server`）。
+
+详细设计见 `docs/superpowers/specs/2026-08-17-mirror-sync-design.md`。
 
 ## 常见问题
 
