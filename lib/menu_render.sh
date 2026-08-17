@@ -10,14 +10,9 @@ _CLI_COVE_MENU_RENDER_SH=1
 menu_render::_run_script() {
   local script_path="$1" title="$2"
 
-  if [[ ! -x "$script_path" ]]; then
-    ui::msgbox "无执行权限" "脚本没有可执行权限：\n$script_path\n\n请先运行:\n  chmod +x \"$script_path\""
-    return
-  fi
-
   clear
   printf '=== %s ===\n\n' "$title"
-  "$script_path"
+  bash "$script_path"
   local rc=$?
   echo
   if [[ $rc -ne 0 ]]; then
@@ -50,7 +45,6 @@ menu_render::_script_menu() {
   for p in "${paths[@]}"; do
     menu_scan::parse_metadata "$p"
     title="$META_TITLE"
-    [[ -x "$p" ]] || title="$title [无执行权限]"
     desc="$META_DESC"
     if [[ -n "$desc" ]]; then
       menu_args+=("$i" "$title - $desc")

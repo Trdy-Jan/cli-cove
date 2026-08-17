@@ -53,8 +53,7 @@ cli-cove/
    # @order: 10        # 可选，数值越小在菜单中越靠前，缺省排在后面
    ```
 4. 编写脚本主体逻辑，可选 `source` 公共 lib（模板中已演示健壮写法）。
-5. 赋予执行权限：`chmod +x scripts/<category>/新脚本.sh`。
-6. 先脱离菜单验证能独立运行：`bash scripts/<category>/新脚本.sh`，再通过 `./main.bash` 验证菜单集成。
+5. 先脱离菜单验证能独立运行：`bash scripts/<category>/新脚本.sh`，再通过 `./main.bash` 验证菜单集成。菜单会以 `bash <script>` 方式调用脚本，无需手动 `chmod +x`；若想用 `./新脚本.sh` 直接执行，才需要自行赋予执行权限。
 
 全程不需要修改 `main.bash`、`lib/` 或任何清单文件。
 
@@ -76,7 +75,6 @@ cli-cove/
 ## 常见问题
 
 - **启动报错找不到 whiptail/dialog**：按提示的安装命令安装其中一个即可（如 `sudo apt install -y whiptail`）。
-- **菜单里的脚本标题带 `[无执行权限]`**：执行 `chmod +x` 对应脚本文件后即可正常运行。
 - **脚本执行失败**：菜单会显示退出码并暂停等待回车，方便查看脚本自身打印的报错信息。
 
 ## 测试
