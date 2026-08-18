@@ -16,6 +16,11 @@ chmod +x main.bash
 
 菜单操作：直接输入关键字模糊过滤、↑/↓ 移动选项、回车确认、ESC/Ctrl-C 返回上一级（在顶层菜单则退出程序）。
 
+首次运行会自动把 `cli-cove` 命令安装到 `~/.local/bin`（若该目录不在
+`PATH` 中，会自动追加到 `~/.bashrc`/`~/.zshrc`），重开终端或
+`source` 一下之后，之后直接输入 `cli-cove` 即可启动菜单，无需再
+`cd` 到仓库目录。此行为可用 `CLI_COVE_SKIP_SELF_INSTALL=1` 跳过。
+
 ## 目录结构
 
 ```

@@ -27,6 +27,8 @@ source "$LIB_DIR/log.sh"
 source "$LIB_DIR/die.sh"
 # shellcheck source=lib/deps.sh
 source "$LIB_DIR/deps.sh"
+# shellcheck source=lib/self_install.sh
+source "$LIB_DIR/self_install.sh"
 # shellcheck source=lib/ui_backend.sh
 source "$LIB_DIR/ui_backend.sh"
 # shellcheck source=lib/menu_scan.sh
@@ -35,6 +37,8 @@ source "$LIB_DIR/menu_scan.sh"
 source "$LIB_DIR/menu_render.sh"
 
 main() {
+  self_install::ensure "$ROOT_DIR/main.bash"
+
   if ! deps::check_ui_backend; then
     log::warn "未检测到 fzf，将使用纯文本数字菜单（体验有限，建议安装 fzf）。"
     deps::print_install_hint
