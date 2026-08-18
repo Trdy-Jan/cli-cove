@@ -56,8 +56,8 @@ menu_render::_script_menu() {
 
   local choice
   choice="$(ui::menu "$(menu_scan::category_title "$category")" \
-    "选择要运行的脚本（方向键/数字键选择，回车确认，ESC 返回上一级）" \
-    20 78 12 "${menu_args[@]}")"
+    "输入过滤，方向键选择，回车确认，ESC 返回上一级" \
+    "${menu_args[@]}")"
   local rc=$?
   if [[ $rc -ne 0 || -z "$choice" ]]; then
     return 1
@@ -96,8 +96,8 @@ menu_render::main_loop() {
 
     local choice
     choice="$(ui::menu "cli-cove" \
-      "选择分类（方向键/数字键选择，回车确认，ESC 退出）" \
-      20 78 12 "${menu_args[@]}")"
+      "输入过滤，方向键选择，回车确认，ESC 退出" \
+      "${menu_args[@]}")"
     local rc=$?
     if [[ $rc -ne 0 || -z "$choice" ]]; then
       return

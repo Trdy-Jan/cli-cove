@@ -35,13 +35,11 @@ source "$LIB_DIR/menu_scan.sh"
 source "$LIB_DIR/menu_render.sh"
 
 main() {
-  local backend
-  if ! backend="$(deps::check_ui_backend)"; then
-    log::error "未检测到 whiptail 或 dialog，无法启动交互菜单。"
+  if ! deps::check_ui_backend; then
+    log::error "未检测到 fzf，无法启动交互菜单。"
     deps::print_install_hint
     exit 1
   fi
-  export CLI_COVE_UI_BACKEND="$backend"
 
   if [[ ! -d "$SCRIPTS_DIR" ]]; then
     die "scripts 目录不存在: $SCRIPTS_DIR"

@@ -11,30 +11,10 @@ deps::has_cmd() {
 }
 
 # deps::check_ui_backend
-# 探测可用的菜单后端（whiptail 优先，其次 dialog）。
-# 可用 CLI_COVE_UI_BACKEND 环境变量强制指定其中之一。
-# 成功: 打印后端命令名到 stdout，返回 0
-# 失败: 返回 1，不打印内容
+# 探测菜单所需的 fzf 是否可用。
+# 成功: 返回 0；失败: 返回 1
 deps::check_ui_backend() {
-  if [[ -n "${CLI_COVE_UI_BACKEND:-}" ]]; then
-    if deps::has_cmd "$CLI_COVE_UI_BACKEND"; then
-      printf '%s\n' "$CLI_COVE_UI_BACKEND"
-      return 0
-    fi
-    return 1
-  fi
-
-  if deps::has_cmd whiptail; then
-    printf 'whiptail\n'
-    return 0
-  fi
-
-  if deps::has_cmd dialog; then
-    printf 'dialog\n'
-    return 0
-  fi
-
-  return 1
+  deps::has_cmd fzf
 }
 
 # deps::print_install_hint
@@ -51,23 +31,23 @@ deps::print_install_hint() {
 
   case "$os_id $os_id_like" in
     *debian*|*ubuntu*)
-      printf '请运行: sudo apt update && sudo apt install -y whiptail\n'
+      printf '请运行: sudo apt update && sudo apt install -y fzf\n'
       ;;
     *rhel*|*fedora*|*centos*)
-      printf '请运行: sudo dnf install -y newt   # whiptail 包含在 newt 包中\n'
+      printf '请运行: sudo dnf install -y fzf\n'
       ;;
     *arch*)
-      printf '请运行: sudo pacman -S dialog\n'
+      printf '请运行: sudo pacman -S fzf\n'
       ;;
     *alpine*)
-      printf '请运行: sudo apk add dialog\n'
+      printf '请运行: sudo apk add fzf\n'
       ;;
     *)
-      printf '未能识别当前发行版，请安装 whiptail 或 dialog 中的任意一个，例如：\n'
-      printf '  Debian/Ubuntu: sudo apt install -y whiptail\n'
-      printf '  RHEL/Fedora:   sudo dnf install -y newt\n'
-      printf '  Arch:          sudo pacman -S dialog\n'
-      printf '  Alpine:        sudo apk add dialog\n'
+      printf '未能识别当前发行版，请安装 fzf，例如：\n'
+      printf '  Debian/Ubuntu: sudo apt install -y fzf\n'
+      printf '  RHEL/Fedora:   sudo dnf install -y fzf\n'
+      printf '  Arch:          sudo pacman -S fzf\n'
+      printf '  Alpine:        sudo apk add fzf\n'
       ;;
   esac
 }
