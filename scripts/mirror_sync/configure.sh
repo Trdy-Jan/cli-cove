@@ -31,9 +31,13 @@ source "$LIB_DIR/mirror_sync.sh"
 # key|提示文案|默认值
 _CONFIG_ITEMS=(
   "NPM_STORAGE_DIR|Verdaccio storage 目录路径|/opt/verdaccio/storage"
-  "NPM_SERVICE_NAME|Verdaccio 的 systemd 服务名（用于导入完成后的重启提示）|verdaccio"
+  "NPM_DEPLOY_TYPE|Verdaccio 部署方式：systemd 或 docker-compose|systemd"
+  "NPM_SERVICE_NAME|Verdaccio 服务名（systemd 单元名，或 docker-compose 里的 service 名）|verdaccio"
+  "NPM_COMPOSE_DIR|Verdaccio 的 docker-compose.yml 所在目录（部署方式为 docker-compose 时填写）|"
   "PYTHON_SERVER_DIR|Devpi server-dir 路径|/opt/devpi/server"
-  "PYTHON_SERVICE_NAME|Devpi 的 systemd 服务名（用于导入完成后的重启提示）|devpi-server"
+  "PYTHON_DEPLOY_TYPE|Devpi 部署方式：systemd 或 docker-compose|systemd"
+  "PYTHON_SERVICE_NAME|Devpi 服务名（systemd 单元名，或 docker-compose 里的 service 名）|devpi-server"
+  "PYTHON_COMPOSE_DIR|Devpi 的 docker-compose.yml 所在目录（部署方式为 docker-compose 时填写）|"
   "EXPORT_OUTPUT_DIR|导出数据包存放目录|$HOME/mirror-exports"
 )
 

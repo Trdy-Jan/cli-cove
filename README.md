@@ -75,6 +75,8 @@ cli-cove/
 | `mirror_sync::build_manifest` | 生成目录的 sha256sum 兼容清单（用于导出/校验） |
 | `mirror_sync::diff_manifest` | 对比两份清单，输出新增/变化的相对路径（增量导出） |
 | `mirror_sync::verify_package` | 校验离线数据包的 `CHECKSUMS.sha256` 完整性 |
+| `mirror_sync::restart_hint` | 根据部署方式（systemd / docker-compose）生成服务重启提示命令 |
+| `mirror_sync::devpi_export` / `devpi_import` | 按部署方式调用 devpi-server 导出/导入（docker-compose 下通过 `docker compose run` 执行） |
 | `mirror_sync::check_import_order` | 依据链/序号判断导入顺序：`init`/`ok`/`new_chain`/`reject:*` |
 | `mirror_sync::is_duplicate_import` / `record_import` | 导入去重检查与状态记录 |
 
@@ -89,8 +91,10 @@ cli-cove/
    带版本号（链 ID + 序号）与 sha256 完整性校验的 `.tar` 数据包，可用
    `scripts/optical/burn_disc.sh` 刻录传输。
 3. `npm_import.sh` / `python_import.sh`：在隔离环境中校验数据包完整性、检查
-   导入顺序、防止重复导入，完成后提示手动重启对应服务
-   （`systemctl restart verdaccio` / `devpi-server`）。
+   导入顺序、防止重复导入，完成后提示手动重启对应服务。部署方式
+   （`NPM_DEPLOY_TYPE` / `PYTHON_DEPLOY_TYPE`）可配置为 `systemd`（提示
+   `systemctl restart <service>`）或 `docker-compose`（提示
+   `docker compose restart <service>`，可选配置 compose 项目目录）。
 
 详细设计见 `docs/superpowers/specs/2026-08-17-mirror-sync-design.md`。
 

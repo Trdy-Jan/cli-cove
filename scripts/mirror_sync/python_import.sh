@@ -36,14 +36,27 @@ BACKEND="python"
 main() {
   [[ "${1:-}" == "--reconfigure" ]] && {
     mirror_sync::config_set PYTHON_SERVER_DIR ""
+    mirror_sync::config_set PYTHON_DEPLOY_TYPE ""
     mirror_sync::config_set PYTHON_SERVICE_NAME ""
+    mirror_sync::config_set PYTHON_COMPOSE_DIR ""
   }
 
-  local server_dir service_name
+  local server_dir deploy_type service_name compose_dir
   server_dir="$(mirror_sync::require_config PYTHON_SERVER_DIR "Devpi server-dir 路径" "/opt/devpi/server")"
-  service_name="$(mirror_sync::require_config PYTHON_SERVICE_NAME "Devpi 的 systemd 服务名" "devpi-server")"
-
-  if ! deps::has_cmd devpi-server; then
+  deploy_type="$(mirror_sync::require_config PYTHON_DEPLOY_TYPE "Devpi 部署方式：systemd 或 docker-compose" "systemd")"
+  service_name="$(mirror_sync::require_config PYTHON_SERVICE_NAME "Devpi 服务名（systemd 单元名，或 docker-compose 里的 service 名）" "devpi-server")"
+  compose_dir=""
+  if [[ "$deploy_type" == "docker-compose" ]]; then
+    compose_dir="$(mirror_sync::require_config PYTHON_COMPOSE_DIR "Devpi 的 docker-compose.yml 所在目录" "")"
+    if [[ ! -d "$compose_dir" ]]; then
+      log::error "目录不存在: $compose_dir"
+      exit 1
+    fi
+    if ! deps::has_cmd docker; then
+      log::error "找不到 docker 命令，无法通过 docker compose 完成导入"
+      exit 1
+    fi
+  elif ! deps::has_cmd devpi-server; then
     log::error "找不到 devpi-server 命令，无法完成导入"
     exit 1
   fi
@@ -154,7 +167,9 @@ main() {
     cp -p -- "$f" "$dest"
   done
 
-  log::warn "即将执行 devpi-server --import 落库，请确保 devpi-server 服务已停止"
+  local stop_hint="devpi-server 服务已停止"
+  [[ "$deploy_type" == "docker-compose" ]] && stop_hint="devpi-server 服务已停止（可执行: docker compose stop $service_name）"
+  log::warn "即将执行 devpi-server --import 落库，请确保 $stop_hint"
   local confirm
   read -rp "devpi-server 是否已停止？[y/N]: " confirm
   if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
@@ -162,13 +177,16 @@ main() {
     exit 1
   fi
 
+  if [[ "$deploy_type" == "docker-compose" ]]; then
+    log::warn "docker-compose 模式会以 --entrypoint devpi-server 覆盖镜像原始入口，若镜像 entrypoint 脚本包含权限初始化等逻辑将被跳过，需按实际镜像验证"
+  fi
   log::info "执行 devpi-server --import（具体参数需按实际 Devpi 版本核对）..."
-  devpi-server --serverdir="$server_dir" --import="$snapshot_dir"
+  mirror_sync::devpi_import "$deploy_type" "$service_name" "$compose_dir" "$server_dir" "$snapshot_dir"
 
   mirror_sync::record_import "$package_id" "$chain_id" "$sequence" "$import_state" "$applied_ids"
 
   log::success "导入完成（序号 $sequence，链 ${chain_id:0:8}...）"
-  log::warn "请手动重启服务以确保立即生效: sudo systemctl restart $service_name"
+  log::warn "请手动重启服务以确保立即生效: $(mirror_sync::restart_hint "$deploy_type" "$service_name" "$compose_dir")"
 }
 
 main "$@"

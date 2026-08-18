@@ -177,6 +177,67 @@ mirror_sync::check_import_order() {
   fi
 }
 
+# mirror_sync::restart_hint <deploy_type> <service_name> [compose_dir]
+# 输出: 供人工执行的服务重启命令文案
+# deploy_type=docker-compose 时，若给了 compose_dir 则附带 cd；否则退化为 systemctl
+mirror_sync::restart_hint() {
+  local deploy_type="$1" service_name="$2" compose_dir="${3:-}"
+  case "$deploy_type" in
+    docker-compose)
+      if [[ -n "$compose_dir" ]]; then
+        printf '(cd %s && docker compose restart %s)\n' "$compose_dir" "$service_name"
+      else
+        printf 'docker compose restart %s（未配置 compose 项目目录，需先 cd 到对应目录）\n' "$service_name"
+      fi
+      ;;
+    *)
+      printf 'sudo systemctl restart %s\n' "$service_name"
+      ;;
+  esac
+}
+
+# mirror_sync::devpi_export <deploy_type> <service_name> <compose_dir> <server_dir> <snapshot_dir>
+# 在 server_dir 上执行 devpi-server --export，产出快照到 snapshot_dir
+# systemd: 直接调用宿主机 devpi-server 命令
+# docker-compose: 用 `docker compose run` 起一次性容器，把 server_dir/snapshot_dir
+#   各自 bind mount 到容器内固定路径，不依赖 compose 文件本身怎么挂载数据目录
+mirror_sync::devpi_export() {
+  local deploy_type="$1" service_name="$2" compose_dir="$3" server_dir="$4" snapshot_dir="$5"
+  mkdir -p "$snapshot_dir"
+  case "$deploy_type" in
+    docker-compose)
+      ( cd "$compose_dir" && docker compose run --rm -T \
+          -v "$server_dir:/mirror-sync/serverdir" \
+          -v "$snapshot_dir:/mirror-sync/snapshot" \
+          --entrypoint devpi-server \
+          "$service_name" \
+          --serverdir=/mirror-sync/serverdir --export=/mirror-sync/snapshot )
+      ;;
+    *)
+      devpi-server --serverdir="$server_dir" --export="$snapshot_dir"
+      ;;
+  esac
+}
+
+# mirror_sync::devpi_import <deploy_type> <service_name> <compose_dir> <server_dir> <snapshot_dir>
+# 把 snapshot_dir 中的快照通过 devpi-server --import 落库到 server_dir
+mirror_sync::devpi_import() {
+  local deploy_type="$1" service_name="$2" compose_dir="$3" server_dir="$4" snapshot_dir="$5"
+  case "$deploy_type" in
+    docker-compose)
+      ( cd "$compose_dir" && docker compose run --rm -T \
+          -v "$server_dir:/mirror-sync/serverdir" \
+          -v "$snapshot_dir:/mirror-sync/snapshot" \
+          --entrypoint devpi-server \
+          "$service_name" \
+          --serverdir=/mirror-sync/serverdir --import=/mirror-sync/snapshot )
+      ;;
+    *)
+      devpi-server --serverdir="$server_dir" --import="$snapshot_dir"
+      ;;
+  esac
+}
+
 # mirror_sync::is_duplicate_import <package_id> <applied_ids_file>
 # 返回 0 表示该 package_id 已经导入过，1 表示还没有
 mirror_sync::is_duplicate_import() {

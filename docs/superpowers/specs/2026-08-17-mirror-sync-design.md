@@ -18,7 +18,9 @@
 - 不处理源端软件包的删除/下架同步（镜像仓库以追加为主，增量只处理新增/变化文件）。
 - 不支持同一后端配置多个仓库实例（如两个独立的 Verdaccio storage 目录）——
   每个后端只有一份配置路径，YAGNI。
-- 导入完成后不自动重启 Verdaccio/Devpi 服务，只打印重启提示命令。
+- 导入完成后不自动重启 Verdaccio/Devpi 服务，只打印重启提示命令；提示命令
+  根据 `*_DEPLOY_TYPE`（`systemd` 或 `docker-compose`）生成，不支持 systemd/
+  docker-compose 之外的部署方式（如 k8s）。
 - 不做数据签名（GPG 等）体系，完整性校验仅用 sha256。
 
 ## 架构
@@ -63,9 +65,13 @@ scripts/
 | Key | 说明 | 默认值提示 |
 |---|---|---|
 | `NPM_STORAGE_DIR` | Verdaccio storage 目录 | `/opt/verdaccio/storage` |
-| `NPM_SERVICE_NAME` | 重启提示用的 systemd 服务名 | `verdaccio` |
+| `NPM_DEPLOY_TYPE` | Verdaccio 部署方式：`systemd` 或 `docker-compose` | `systemd` |
+| `NPM_SERVICE_NAME` | 重启提示用的服务名（systemd 单元名，或 compose service 名） | `verdaccio` |
+| `NPM_COMPOSE_DIR` | Verdaccio 的 `docker-compose.yml` 所在目录（`NPM_DEPLOY_TYPE=docker-compose` 时使用） | 空 |
 | `PYTHON_SERVER_DIR` | Devpi server-dir | `/opt/devpi/server` |
-| `PYTHON_SERVICE_NAME` | 重启提示用的 systemd 服务名 | `devpi-server` |
+| `PYTHON_DEPLOY_TYPE` | Devpi 部署方式：`systemd` 或 `docker-compose` | `systemd` |
+| `PYTHON_SERVICE_NAME` | 重启提示用的服务名（systemd 单元名，或 compose service 名） | `devpi-server` |
+| `PYTHON_COMPOSE_DIR` | Devpi 的 `docker-compose.yml` 所在目录（`PYTHON_DEPLOY_TYPE=docker-compose` 时使用） | 空 |
 | `EXPORT_OUTPUT_DIR` | 导出包存放目录（供后续刻录） | `$HOME/mirror-exports` |
 
 行为：
@@ -189,6 +195,16 @@ scripts/
   `devpi-server --import=<目录> --serverdir=<PYTHON_SERVER_DIR>` 完成落库，而不是
   直接拿 payload 覆盖目标 server-dir 里的数据库文件。这一步的确切命令行参数
   需要在实现阶段对照实际 Devpi 版本验证。
+  - `PYTHON_DEPLOY_TYPE=docker-compose` 时（`devpi-server` 二进制不在宿主机
+    PATH 上），`mirror_sync::devpi_export`/`devpi_import` 改为在
+    `PYTHON_COMPOSE_DIR` 下执行
+    `docker compose run --rm -T --entrypoint devpi-server <service>`，并用
+    `-v` 把宿主机的 `PYTHON_SERVER_DIR`/快照目录各自 bind mount 到容器内固定
+    路径（`/mirror-sync/serverdir`、`/mirror-sync/snapshot`）后传给
+    `--serverdir`/`--export`/`--import`。前提是 `PYTHON_SERVER_DIR` 本身是
+    宿主机可直接访问的 bind mount 目录（而非具名 volume）。覆盖
+    `--entrypoint` 会跳过镜像原始入口脚本可能包含的初始化逻辑（如权限
+    修复），需按实际镜像验证，记为实现期风险点。
 
 ## 错误处理与日志
 

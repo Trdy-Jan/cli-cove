@@ -33,16 +33,22 @@ BACKEND="npm"
 main() {
   [[ "${1:-}" == "--reconfigure" ]] && {
     mirror_sync::config_set NPM_STORAGE_DIR ""
+    mirror_sync::config_set NPM_DEPLOY_TYPE ""
     mirror_sync::config_set NPM_SERVICE_NAME ""
+    mirror_sync::config_set NPM_COMPOSE_DIR ""
   }
 
-  local storage_dir service_name
+  local storage_dir deploy_type service_name compose_dir
   storage_dir="$(mirror_sync::require_config NPM_STORAGE_DIR "Verdaccio storage 目录路径" "/opt/verdaccio/storage")"
   if [[ ! -d "$storage_dir" ]]; then
     log::error "目录不存在: $storage_dir"
     exit 1
   fi
-  service_name="$(mirror_sync::require_config NPM_SERVICE_NAME "Verdaccio 的 systemd 服务名" "verdaccio")"
+  deploy_type="$(mirror_sync::require_config NPM_DEPLOY_TYPE "Verdaccio 部署方式：systemd 或 docker-compose" "systemd")"
+  service_name="$(mirror_sync::require_config NPM_SERVICE_NAME "Verdaccio 服务名（systemd 单元名，或 docker-compose 里的 service 名）" "verdaccio")"
+  compose_dir=""
+  [[ "$deploy_type" == "docker-compose" ]] && \
+    compose_dir="$(mirror_sync::require_config NPM_COMPOSE_DIR "Verdaccio 的 docker-compose.yml 所在目录" "")"
 
   local state_dir
   state_dir="$(mirror_sync::state_root)/$BACKEND"
@@ -143,7 +149,7 @@ main() {
   mirror_sync::record_import "$package_id" "$chain_id" "$sequence" "$import_state" "$applied_ids"
 
   log::success "导入完成（序号 $sequence，链 ${chain_id:0:8}...）"
-  log::warn "请手动重启服务以确保立即生效: sudo systemctl restart $service_name"
+  log::warn "请手动重启服务以确保立即生效: $(mirror_sync::restart_hint "$deploy_type" "$service_name" "$compose_dir")"
 }
 
 main "$@"
