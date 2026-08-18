@@ -5,7 +5,7 @@
 ## 依赖
 
 - Bash 4+
-- `fzf`（启动时会自动探测；没有会提示对应发行版的安装命令）
+- `fzf`（可选但推荐，启动时会自动探测；没装会打印安装命令，并自动降级为纯文本数字编号菜单继续运行）
 
 ## 快速开始
 
@@ -66,7 +66,7 @@ cli-cove/
 | `deps::has_cmd <cmd>` | 判断命令是否存在 |
 | `deps::check_ui_backend` | 探测 `fzf` 是否可用 |
 | `deps::print_install_hint` | 按发行版打印安装命令 |
-| `ui::menu` / `ui::msgbox` | 基于 fzf 的菜单与提示框 |
+| `ui::menu` / `ui::msgbox` | 菜单与提示框；`ui::menu` 有 fzf 用 fzf，没有则自动降级为数字编号菜单 |
 | `menu_scan::list_categories` | 列出所有有效分类 |
 | `menu_scan::list_scripts_in_category` | 列出某分类下按 `@order` 排序的脚本 |
 | `menu_scan::parse_metadata` | 解析脚本头部元数据到 `META_TITLE`/`META_DESC`/`META_ORDER` |
@@ -100,7 +100,7 @@ cli-cove/
 
 ## 常见问题
 
-- **启动报错找不到 fzf**：按提示的安装命令安装即可（如 `sudo apt install -y fzf`）。
+- **没装 fzf**：不影响使用，菜单会自动降级为数字编号选择；按提示的安装命令装上 fzf 可获得模糊过滤体验（如 `sudo apt install -y fzf`）。
 - **脚本执行失败**：菜单会显示退出码并暂停等待回车，方便查看脚本自身打印的报错信息。
 
 ## 测试

@@ -36,9 +36,8 @@ source "$LIB_DIR/menu_render.sh"
 
 main() {
   if ! deps::check_ui_backend; then
-    log::error "未检测到 fzf，无法启动交互菜单。"
+    log::warn "未检测到 fzf，将使用纯文本数字菜单（体验有限，建议安装 fzf）。"
     deps::print_install_hint
-    exit 1
   fi
 
   if [[ ! -d "$SCRIPTS_DIR" ]]; then
