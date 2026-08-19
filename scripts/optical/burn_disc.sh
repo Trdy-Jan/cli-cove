@@ -92,10 +92,20 @@ fi
 
 # 显示光盘信息
 log_info "光盘信息:"
-if ! dvd+rw-mediainfo "$DEVICE" 2>/dev/null | grep -E "Mounted Media|Media ID|Free Blocks|Disc status" | tee -a "$LOG_FILE"; then
+MEDIAINFO=$(dvd+rw-mediainfo "$DEVICE" 2>/dev/null)
+if [ -z "$MEDIAINFO" ]; then
     log_warn "无法读取光盘信息，请确认已放入可刻录光盘"
     read -rp "是否继续? [y/N]: " CONTINUE
     [[ ! "$CONTINUE" =~ ^[Yy]$ ]] && exit 1
+else
+    echo "$MEDIAINFO" | grep -E "Mounted Media|Media ID|Free Blocks|Disc status" | tee -a "$LOG_FILE"
+fi
+
+# 从 mediainfo 中解析实际盘片类型和可用容量，用于后续容量校验
+MEDIA_TYPE=$(echo "$MEDIAINFO" | grep -m1 "Mounted Media" | awk -F',' '{print $2}' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')
+MEDIA_FREE_BYTES=$(echo "$MEDIAINFO" | grep -m1 "Free Blocks" | grep -oE '[0-9]+$')
+if [ -n "$MEDIA_TYPE" ]; then
+    log_info "检测到盘片类型: $MEDIA_TYPE"
 fi
 
 # ---------- 4. 选择刻录模式 ----------
@@ -130,15 +140,26 @@ while true; do
     log_info "目录: $SOURCE_DIR"
     log_info "大小: $DIR_SIZE_HUMAN ($FILE_COUNT 个文件)"
 
-    # 容量警告(DVD 约 4.37 GB = 4694304000 bytes, DVD DL 约 8.5 GB)
-    if [ "$DIR_SIZE" -gt 8547991552 ]; then
-        log_error "目录大小超过 DVD±R DL 容量 (8.5 GB)，需要蓝光盘"
-        read -rp "是否继续? [y/N]: " CONTINUE
-        [[ ! "$CONTINUE" =~ ^[Yy]$ ]] && continue
-    elif [ "$DIR_SIZE" -gt 4694304000 ]; then
-        log_warn "目录大小超过普通 DVD 容量 (4.37 GB)，需要双层或蓝光盘"
-        read -rp "是否继续? [y/N]: " CONTINUE
-        [[ ! "$CONTINUE" =~ ^[Yy]$ ]] && continue
+    # 容量警告：优先使用第 3 步从已插入光盘实测出的可用容量(MEDIA_FREE_BYTES)，
+    # 只有检测失败时才退回按 DVD/DVD DL 的固定阈值粗略估算
+    if [ -n "$MEDIA_FREE_BYTES" ] && [ "$MEDIA_FREE_BYTES" -gt 0 ]; then
+        MEDIA_FREE_HUMAN=$(awk -v b="$MEDIA_FREE_BYTES" 'BEGIN{printf "%.2f GB", b/1073741824}')
+        if [ "$DIR_SIZE" -gt "$MEDIA_FREE_BYTES" ]; then
+            log_error "目录大小 ($DIR_SIZE_HUMAN) 超过当前盘片 (${MEDIA_TYPE:-未知类型}) 的可用容量 ($MEDIA_FREE_HUMAN)"
+            read -rp "是否继续? [y/N]: " CONTINUE
+            [[ ! "$CONTINUE" =~ ^[Yy]$ ]] && continue
+        fi
+    else
+        # 容量警告(DVD 约 4.37 GB = 4694304000 bytes, DVD DL 约 8.5 GB)
+        if [ "$DIR_SIZE" -gt 8547991552 ]; then
+            log_error "目录大小超过 DVD±R DL 容量 (8.5 GB)，需要蓝光盘"
+            read -rp "是否继续? [y/N]: " CONTINUE
+            [[ ! "$CONTINUE" =~ ^[Yy]$ ]] && continue
+        elif [ "$DIR_SIZE" -gt 4694304000 ]; then
+            log_warn "目录大小超过普通 DVD 容量 (4.37 GB)，需要双层或蓝光盘"
+            read -rp "是否继续? [y/N]: " CONTINUE
+            [[ ! "$CONTINUE" =~ ^[Yy]$ ]] && continue
+        fi
     fi
     break
 done
