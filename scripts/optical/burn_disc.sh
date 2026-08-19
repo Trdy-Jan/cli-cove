@@ -146,7 +146,7 @@ done
 # ---------- 6. Volume ID (仅新建模式需要) ----------
 if [ "$BURN_MODE" = "1" ]; then
     log_step "设置 Volume ID (光盘卷标)"
-    DEFAULT_VOL=$(basename "$SOURCE_DIR" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9_' '_' | cut -c1-32)
+    DEFAULT_VOL=$(printf '%s' "$(basename "$SOURCE_DIR")" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9_' '_' | cut -c1-32)
     read -rp "请输入 Volume ID [默认: $DEFAULT_VOL]: " VOLUME_ID
     VOLUME_ID=${VOLUME_ID:-$DEFAULT_VOL}
 
