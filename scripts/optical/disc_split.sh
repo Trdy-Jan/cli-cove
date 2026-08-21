@@ -13,7 +13,7 @@
 #       cat <name>.part* | tar -xf -
 #
 # @title: 拆分文件夹用于刻录多张光盘
-# @desc: 按容量将文件夹内容 FFD 装箱拆分为多个子文件夹，供 burn_disc.sh 逐张刻录
+# @desc: 按容量将文件夹内容 FFD 装箱拆分为多个子文件夹
 # @order: 5
 
 set -e
