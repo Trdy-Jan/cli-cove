@@ -102,8 +102,13 @@ else
 fi
 
 # 从 mediainfo 中解析实际盘片类型和可用容量，用于后续容量校验
+# 注意: dvd+rw-mediainfo 的 Free Blocks 格式为 "<块数>*2KB"（如 12219392*2KB），
+# 数字不在行尾，且单位是块（每块 2KB）而非字节，需要转换。
 MEDIA_TYPE=$(echo "$MEDIAINFO" | grep -m1 "Mounted Media" | awk -F',' '{print $2}' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')
-MEDIA_FREE_BYTES=$(echo "$MEDIAINFO" | grep -m1 "Free Blocks" | grep -oE '[0-9]+$')
+MEDIA_FREE_BLOCKS=$(echo "$MEDIAINFO" | grep -m1 "Free Blocks" | grep -oE '[0-9]+' | head -1)
+if [ -n "$MEDIA_FREE_BLOCKS" ]; then
+    MEDIA_FREE_BYTES=$((MEDIA_FREE_BLOCKS * 2048))
+fi
 if [ -n "$MEDIA_TYPE" ]; then
     log_info "检测到盘片类型: $MEDIA_TYPE"
 fi
