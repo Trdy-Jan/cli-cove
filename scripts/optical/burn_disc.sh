@@ -261,10 +261,20 @@ if [[ "$VERIFY_CONFIRM" =~ ^[Yy]$ ]]; then
     MOUNT_POINT="/mnt/disc_verify_$$"
     mkdir -p "$MOUNT_POINT"
 
-    # 等待光盘就绪
-    sleep 3
+    # 等待光盘就绪: growisofs 刻录结束后会 reload tray，内核/udev 重新识别
+    # 文件系统所需时间因驱动器和盘片容量而异（大容量 BD-R 尤其慢），固定
+    # sleep 不可靠，改为轮询重试
+    MOUNT_OK=0
+    MOUNT_ERR=""
+    for _attempt in $(seq 1 10); do
+        sleep 2
+        if MOUNT_ERR=$(mount -o ro "$DEVICE" "$MOUNT_POINT" 2>&1); then
+            MOUNT_OK=1
+            break
+        fi
+    done
 
-    if mount -o ro "$DEVICE" "$MOUNT_POINT" 2>/dev/null; then
+    if [ "$MOUNT_OK" -eq 1 ]; then
         log_info "光盘已挂载到 $MOUNT_POINT"
 
         # 对比文件数量
@@ -280,7 +290,7 @@ if [[ "$VERIFY_CONFIRM" =~ ^[Yy]$ ]]; then
         umount "$MOUNT_POINT"
         rmdir "$MOUNT_POINT"
     else
-        log_warn "无法挂载光盘进行校验"
+        log_warn "无法挂载光盘进行校验: ${MOUNT_ERR:-未知错误}"
         rmdir "$MOUNT_POINT" 2>/dev/null || true
     fi
 fi
