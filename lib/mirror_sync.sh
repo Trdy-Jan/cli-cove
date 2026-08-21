@@ -136,6 +136,39 @@ mirror_sync::package_id() {
   printf '%s-%s-seq%s\n' "$1" "$2" "$3"
 }
 
+# mirror_sync::resolve_export_plan <state_file>
+# 决定本次导出使用的 chain_id / sequence / base_sequence，以及是否强制全量导出。
+# 无历史导出记录：直接全量，不询问。
+# 有历史导出记录：交互询问全量/增量（默认增量），全量会开启一条新链
+#   （与 check_import_order 里对"全量包 chain_id 不同于本地记录"的 new_chain 处理相衔接，
+#   导入端已支持该场景下的确认重新初始化，无需改动导入脚本）。
+# 输出 4 行: chain_id / sequence / base_sequence / force_full(0 或 1)
+mirror_sync::resolve_export_plan() {
+  local state_file="$1"
+  local last_chain last_seq
+  last_chain="$(mirror_sync::kv_get "$state_file" CHAIN_ID)"
+  last_seq="$(mirror_sync::kv_get "$state_file" SEQUENCE)"
+
+  if [[ -z "$last_chain" ]]; then
+    log::info "未发现历史导出记录，将执行全量导出" >&2
+    printf '%s\n%s\n%s\n%s\n' "$(mirror_sync::gen_chain_id)" 0 "" 1
+    return 0
+  fi
+
+  local mode
+  read -rp "检测到历史导出记录（链 ${last_chain:0:8}...，上次序号 $last_seq）。本次导出方式？[F]ull 全量 / [i]ncremental 增量 (默认 i): " mode >&2
+  case "$mode" in
+    [Ff]*)
+      log::info "将执行全量导出（开启新的导出链）" >&2
+      printf '%s\n%s\n%s\n%s\n' "$(mirror_sync::gen_chain_id)" 0 "" 1
+      ;;
+    *)
+      log::info "将执行增量导出（链 ${last_chain:0:8}...，序号 $((last_seq + 1))）" >&2
+      printf '%s\n%s\n%s\n%s\n' "$last_chain" "$((last_seq + 1))" "$last_seq" 0
+      ;;
+  esac
+}
+
 # mirror_sync::verify_package <package_dir>
 # 在 package_dir 内执行 sha256sum -c CHECKSUMS.sha256；成功返回 0，任何一行不匹配返回非 0
 mirror_sync::verify_package() {

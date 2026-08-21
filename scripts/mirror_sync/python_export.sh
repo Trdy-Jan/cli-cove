@@ -99,20 +99,9 @@ main() {
   state_file="$state_dir/state.env"
   last_manifest="$state_dir/last_checksums.sha256"
 
-  local last_chain last_seq chain_id sequence base_sequence
-  last_chain="$(mirror_sync::kv_get "$state_file" CHAIN_ID)"
-  last_seq="$(mirror_sync::kv_get "$state_file" SEQUENCE)"
-  if [[ -z "$last_chain" ]]; then
-    chain_id="$(mirror_sync::gen_chain_id)"
-    sequence=0
-    base_sequence=""
-    log::info "未发现历史导出记录，将执行全量导出"
-  else
-    chain_id="$last_chain"
-    sequence=$((last_seq + 1))
-    base_sequence="$last_seq"
-    log::info "发现历史导出记录（链 ${chain_id:0:8}...，上次序号 $last_seq），将执行增量导出（序号 $sequence）"
-  fi
+  local chain_id sequence base_sequence force_full
+  { read -r chain_id; read -r sequence; read -r base_sequence; read -r force_full; } \
+    < <(mirror_sync::resolve_export_plan "$state_file")
 
   # 不用 local：EXIT trap 在 main 返回之后才触发，此时函数局部变量已被销毁，
   # 若 work_dir 是 local，set -u 下会报 unbound variable。
@@ -127,7 +116,11 @@ main() {
   mirror_sync::build_manifest "$snapshot_dir" "${EXCLUDES[@]}" > "$current_manifest"
 
   local included="$work_dir/included.txt"
-  mirror_sync::diff_manifest "$current_manifest" "$last_manifest" > "$included"
+  if [[ "$force_full" -eq 1 ]]; then
+    mirror_sync::diff_manifest "$current_manifest" "$work_dir/does_not_exist.sha256" > "$included"
+  else
+    mirror_sync::diff_manifest "$current_manifest" "$last_manifest" > "$included"
+  fi
 
   if [[ ! -s "$included" ]]; then
     log::warn "没有新增或变化的文件，无需导出"
