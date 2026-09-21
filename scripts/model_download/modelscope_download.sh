@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # @title: 下载 ModelScope 模型
-# @desc: 输入 model_id 与保存路径（有默认值），调用 modelscope CLI 自动开始下载
+# @desc: 输入 model_id 与保存路径，自动开始下载
 # @order: 10
 
 set -uo pipefail
